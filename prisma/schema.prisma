@@ -1,0 +1,65 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// user will manage by better auth
+
+model Post {
+  id         String     @id @default(uuid())
+  title      String     @db.VarChar(225)
+  content    String     @db.Text
+  thumbnail  String?
+  isFeatured Boolean    @default(false)
+  status     postStatus @default(PUBLISHED)
+  tags       String[]
+  views      Int        @default(0)
+  authorId   String //better auth
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @default(now())
+  comment    Comment[]
+
+  @@index([authorId])
+  @@map("posts")
+}
+
+model Comment {
+  id        String        @id @default(uuid())
+  content   String        @db.Text
+  authorId  String //better auth will manage
+  postId    String
+  post      Post          @relation(fields: [postId], references: [id])
+  parentId  String?
+
+  parent    Comment?      @relation("CommentReplies", fields: [parentId], references: [id])
+  replies  Comment[] @relation("CommentReplies")
+
+  status    commentStatus @default(APPROVED)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @default(now())
+
+  @@index([postId])
+  @@index([authorId])
+  @@map("comments")
+}
+
+enum postStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum commentStatus {
+  APPROVED
+  REJECT
+}
