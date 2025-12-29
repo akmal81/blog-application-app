@@ -34,15 +34,15 @@ model Post {
 }
 
 model Comment {
-  id        String        @id @default(uuid())
-  content   String        @db.Text
-  authorId  String //better auth will manage
-  postId    String
-  post      Post          @relation(fields: [postId], references: [id])
-  parentId  String?
+  id       String  @id @default(uuid())
+  content  String  @db.Text
+  authorId String //better auth will manage
+  postId   String
+  post     Post    @relation(fields: [postId], references: [id])
+  parentId String?
 
-  parent    Comment?      @relation("CommentReplies", fields: [parentId], references: [id])
-  replies  Comment[] @relation("CommentReplies")
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies Comment[] @relation("CommentReplies")
 
   status    commentStatus @default(APPROVED)
   createdAt DateTime      @default(now())
@@ -62,4 +62,71 @@ enum postStatus {
 enum commentStatus {
   APPROVED
   REJECT
+}
+
+model User {
+  id            String    @id
+  name          String
+  email         String
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+
+  role   String? @default("USER")
+  phone  String?
+  status String? @default("ACTIVE")
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
 }
