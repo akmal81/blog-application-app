@@ -6,7 +6,7 @@ import cors from "cors"
 const app: Application = express();
 
 app.use(cors({
-    origin:process.env.APP_URL || "http://localhost:4000 ",
+    origin:process.env.APP_URL || "http://localhost:4000",
     credentials:true
 }))
 
