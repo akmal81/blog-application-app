@@ -11,6 +11,11 @@ router.get(
 
 )
 
+router.get(
+    '/:postId',
+    PostController.getPostbyId
+)
+
 router.post(
     '/', auth(UserRole.USER),
     PostController.createPost

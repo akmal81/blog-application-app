@@ -1,4 +1,6 @@
+import { rateLimitSchema } from "better-auth/db";
 import { Post, postStatus } from "../../../generated/prisma/client";
+
 import { PostWhereInput } from "../../../generated/prisma/models";
 import { prisma } from "../../lib/prisma";
 
@@ -21,7 +23,12 @@ const getAllPost = async (payload: {
     tags: string[] | [],
     isFeatured: boolean | undefined,
     status: postStatus | undefined,
-    authorId: string | undefined
+    authorId: string | undefined,
+    page: number,
+    limit: number,
+    skip: number,
+    sortBy: string,
+    sortOrder: string
 }) => {
 
     const andConditions: PostWhereInput[] = []
@@ -80,29 +87,89 @@ const getAllPost = async (payload: {
         )
     }
 
-    if( payload.authorId){
-        const {authorId} = payload
+    if (payload.authorId) {
+        const { authorId } = payload
         andConditions.push(
             {
-               authorId
+                authorId
             }
         )
     }
 
+    // pagination
+    const { page, limit, skip, sortBy, sortOrder }=payload;
 
     const allPost = await prisma.post.findMany({
+        take: payload.limit,
+        skip:payload.skip,
+
         where: {
 
             AND: andConditions
+        },
 
-
-        }
+        orderBy: payload.sortBy && payload.sortOrder ? {
+            [payload.sortBy]: payload.sortOrder
+        }:{createdAt:"desc"}
 
     });
-    return allPost
+
+    const total = await prisma.post.count(
+        {
+            where: {
+                AND: andConditions
+            }
+        }
+    )
+
+    return {
+        data: allPost,
+        pagination:{
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total/limit)
+        }
+    }
 }
+
+
+
+// single post by id 
+
+const getPostbyId = async (postId: string) => {
+
+const result = await prisma.$transaction(async (tx) => {
+    const updateViewCount = await tx.post.update(
+        {
+            where:{
+                id:postId
+            },
+            data:{
+                views:{
+                    increment:1
+                }
+            }
+        }
+    )
+
+    const postData = await tx.post.findUnique(
+        {
+            where:{
+                id:postId
+            }
+        }
+    )
+    return postData
+})
+
+return result
+} 
+
+
 
 export const postService = {
     createPost,
-    getAllPost
+    getAllPost,
+    getPostbyId
 }
