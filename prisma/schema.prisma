@@ -38,10 +38,10 @@ model Comment {
   content  String  @db.Text
   authorId String //better auth will manage
   postId   String
-  post     Post    @relation(fields: [postId], references: [id])
+  post     Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
   parentId String?
 
-  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies Comment[] @relation("CommentReplies")
 
   status    commentStatus @default(APPROVED)

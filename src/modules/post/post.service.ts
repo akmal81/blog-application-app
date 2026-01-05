@@ -1,5 +1,5 @@
 import { rateLimitSchema } from "better-auth/db";
-import { Post, postStatus } from "../../../generated/prisma/client";
+import { commentStatus, Post, postStatus } from "../../../generated/prisma/client";
 
 import { PostWhereInput } from "../../../generated/prisma/models";
 import { prisma } from "../../lib/prisma";
@@ -97,11 +97,11 @@ const getAllPost = async (payload: {
     }
 
     // pagination
-    const { page, limit, skip, sortBy, sortOrder }=payload;
+    const { page, limit } = payload;
 
     const allPost = await prisma.post.findMany({
         take: payload.limit,
-        skip:payload.skip,
+        skip: payload.skip,
 
         where: {
 
@@ -110,7 +110,13 @@ const getAllPost = async (payload: {
 
         orderBy: payload.sortBy && payload.sortOrder ? {
             [payload.sortBy]: payload.sortOrder
-        }:{createdAt:"desc"}
+        } : { createdAt: "desc" },
+
+        include:{
+            _count:{
+                select:{comment:true}
+            }
+        }
 
     });
 
@@ -124,11 +130,11 @@ const getAllPost = async (payload: {
 
     return {
         data: allPost,
-        pagination:{
+        pagination: {
             total,
             page,
             limit,
-            totalPages: Math.ceil(total/limit)
+            totalPages: Math.ceil(total / limit)
         }
     }
 }
@@ -139,32 +145,66 @@ const getAllPost = async (payload: {
 
 const getPostbyId = async (postId: string) => {
 
-const result = await prisma.$transaction(async (tx) => {
-    const updateViewCount = await tx.post.update(
-        {
-            where:{
-                id:postId
-            },
-            data:{
-                views:{
-                    increment:1
+    const result = await prisma.$transaction(async (tx) => {
+        const updateViewCount = await tx.post.update(
+            {
+                where: {
+                    id: postId
+                },
+                data: {
+                    views: {
+                        increment: 1
+                    }
                 }
             }
-        }
-    )
+        )
 
-    const postData = await tx.post.findUnique(
-        {
-            where:{
-                id:postId
+        const postData = await tx.post.findUnique(
+            {
+                where: {
+                    id: postId
+                },
+                include: {
+                    comment: {
+                        where: {
+                            parentId: null
+                        },
+                        orderBy: {
+                            createdAt: "desc"
+                        },
+                        include: {
+                            replies: {
+                                where: {
+                                    status: commentStatus.APPROVED
+                                },
+                                orderBy: {
+                                    createdAt: "asc"
+                                },
+                                include: {
+                                    replies: {
+                                        where: {
+                                            status: commentStatus.APPROVED
+                                        },
+                                        orderBy: {
+                                            createdAt: "asc"
+                                        },
+
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    _count:{
+                        select:{comment:true}
+                    }
+                }
             }
-        }
-    )
-    return postData
-})
+        )
+        return postData
+    })
 
-return result
-} 
+    return result
+}
 
 
 
