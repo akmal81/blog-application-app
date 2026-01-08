@@ -4,18 +4,18 @@ import auth, { UserRole } from "../../middlewares/auth";
 
 const router = Router()
 router.get(
-    '/:commentId', 
+    '/:commentId',
     auth(UserRole.USER, UserRole.ADMIN),
     commentController.getCommentById
 )
 
 router.get(
     '/author/:authorId',
-     commentController.getCommentsByAuthor
-    )
+    commentController.getCommentsByAuthor
+)
 
 router.post(
-    '/', 
+    '/',
     auth(UserRole.USER, UserRole.ADMIN),
     commentController.createComment
 )
@@ -23,13 +23,18 @@ router.post(
 
 router.patch(
     '/:commentId', auth(UserRole.USER, UserRole.ADMIN),
-     commentController.updateComment
-    )
+    commentController.updateComment
+)
+
+router.patch(
+    '/:commentId/moderate', auth(UserRole.ADMIN),
+    commentController.moderateComment
+)
 
 
 router.delete(
     '/:commentId', auth(UserRole.USER, UserRole.ADMIN),
-     commentController.deleteComment
-    )
+    commentController.deleteComment
+)
 
 export const commentRouter: Router = router

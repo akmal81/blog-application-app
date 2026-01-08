@@ -2,6 +2,7 @@ import { Request, RequestHandler, Response } from "express";
 import { postService } from "./post.service";
 import { postStatus } from "../../../generated/prisma/enums";
 import paginationSortingHelper from "../../helpers/paginationSortingHelper";
+import { UserRole } from "../../middlewares/auth";
 
 const createPost = async (req: Request, res: Response) => {
     try {
@@ -90,7 +91,7 @@ const getAllPost = async (req: Request, res: Response) => {
     } catch (e) {
         res.status(400).json(
             {
-                error: "Post creation failed",
+                error: "Post feached failed",
                 details: e
             }
         )
@@ -102,9 +103,9 @@ const getAllPost = async (req: Request, res: Response) => {
 const getPostbyId = async (req: Request, res: Response) => {
     try {
 
-        const {postId} =  req.params;
+        const { postId } = req.params;
 
-        if(!postId){
+        if (!postId) {
             throw new Error("Post Id is required!!")
         }
 
@@ -112,9 +113,117 @@ const getPostbyId = async (req: Request, res: Response) => {
         res.status(200).json(result)
 
     } catch (e) {
+
         res.status(400).json(
             {
-                error: "Post creation failed",
+                error: "Post 2222 featched failed",
+                details: e
+            }
+        )
+    }
+}
+
+
+const getMyPost = async (req: Request, res: Response) => {
+    try {
+        const user = req.user;
+        if (!user) {
+            throw new Error("You are unauthorize please login");
+
+        }
+        const result = await postService.getMyPost(user.id)
+        res.status(200).json(result)
+     
+    } catch (e) {
+        
+        res.status(400).json(
+            {
+                error: "Post 111 featched failed",
+                details: e
+            }
+        )
+    }
+}
+
+
+const updatePost = async (req: Request, res: Response) => {
+    try {
+        const user = req.user;
+        if (!user) {
+            throw new Error("You are unauthorize please login");
+
+        }
+        const {postId}= req.params;
+
+        // check user admin or not
+
+        const isAdmin = user.role === UserRole.ADMIN
+
+
+        const result = await postService.updatePost(postId as string, req.body, user.id, isAdmin)
+        res.status(200).json(result)
+      
+
+
+    } catch (e) {
+       const errorMessage= (e instanceof Error)? e.message:"Post update failed"
+        res.status(400).json(
+            
+            {
+                error:errorMessage,
+                details: e
+            }
+        )
+    }
+}
+const deletePost = async (req: Request, res: Response) => {
+    try {
+        const user = req.user;
+        if (!user) {
+            throw new Error("You are unauthorize please login");
+
+        }
+        const {postId}= req.params;
+
+        // check user admin or not
+
+        const isAdmin = user.role === UserRole.ADMIN
+
+
+        const result = await postService.deletePost(postId as string, user.id, isAdmin)
+        res.status(200).json(result)
+      
+
+
+    } catch (e) {
+       const errorMessage= (e instanceof Error)? e.message:"Post update failed"
+        res.status(400).json(
+            
+            {
+                error:errorMessage,
+                details: e
+            }
+        )
+    }
+}
+
+
+const getStats=async (req: Request, res: Response) => {
+     try {
+       
+
+
+        const result = await postService.getStats()
+        res.status(200).json(result)
+      
+
+
+    } catch (e) {
+       const errorMessage= (e instanceof Error)? e.message:"Post update failed"
+        res.status(400).json(
+            
+            {
+                error:errorMessage,
                 details: e
             }
         )
@@ -124,5 +233,9 @@ const getPostbyId = async (req: Request, res: Response) => {
 export const PostController = {
     createPost,
     getAllPost,
-    getPostbyId
+    getPostbyId,
+    getMyPost,
+    updatePost,
+    deletePost,
+    getStats
 }

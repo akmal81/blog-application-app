@@ -3,6 +3,7 @@ import { commentStatus, Post, postStatus } from "../../../generated/prisma/clien
 
 import { PostWhereInput } from "../../../generated/prisma/models";
 import { prisma } from "../../lib/prisma";
+import { UserRole } from "../../middlewares/auth";
 
 const createPost = async (data: Omit<Post, "id" | "createdAt" | "updatedAt" | "authorId">, userId: string) => {
     const result = await prisma.post.create({
@@ -112,9 +113,9 @@ const getAllPost = async (payload: {
             [payload.sortBy]: payload.sortOrder
         } : { createdAt: "desc" },
 
-        include:{
-            _count:{
-                select:{comment:true}
+        include: {
+            _count: {
+                select: { comment: true }
             }
         }
 
@@ -194,8 +195,8 @@ const getPostbyId = async (postId: string) => {
                             }
                         }
                     },
-                    _count:{
-                        select:{comment:true}
+                    _count: {
+                        select: { comment: true }
                     }
                 }
             }
@@ -207,9 +208,163 @@ const getPostbyId = async (postId: string) => {
 }
 
 
+const getMyPost = async (authorId: string) => {
+
+
+    await prisma.user.findUniqueOrThrow(
+        {
+            where: {
+                id: authorId,
+                status: "ACTIVE"
+            },
+            select: {
+                id: true
+            }
+        }
+    )
+    const result = await prisma.post.findMany(
+        {
+            where: {
+                authorId
+
+            },
+            orderBy: {
+                createdAt: "desc",
+            },
+            include: {
+                _count: {
+                    select: {
+                        comment: true
+                    }
+                }
+            }
+        }
+    );
+
+    const total = await prisma.post.count(
+        {
+            where: {
+                authorId
+            },
+        }
+    )
+    return {
+        data: result,
+        total
+    }
+}
+
+
+const updatePost = async (postId: string, data: Partial<Post>, authorId: string, isAdmin: boolean) => {
+    const postData = await prisma.post.findUniqueOrThrow(
+        {
+            where: {
+                id: postId
+            },
+            select: {
+                id: true,
+                authorId: true
+            }
+        }
+    )
+
+    if (!isAdmin && postData.authorId !== authorId) {
+        throw new Error("Yor are not the owner of the post");
+    }
+
+    //  user can not delete isFeatured. to do this deleter the isfeatured field from payload
+    if (!isAdmin) {
+        delete data.isFeatured
+    }
+
+    const result = prisma.post.update(
+        {
+            where: {
+                id: postData.id
+            },
+            data
+        }
+    )
+    return result;
+}
+
+/* 5. delete post
+    -- user can delete won post
+    -- admin can delete all post */
+const deletePost = async (postId: string, authorId: string, isAdmin: boolean) => {
+    const postData = await prisma.post.findUniqueOrThrow(
+        {
+            where: {
+                id: postId
+            },
+            select: {
+                id: true,
+                authorId: true
+            }
+        }
+    )
+
+
+    if (!isAdmin && postData.authorId !== authorId) {
+        throw new Error("Yor are not the owner of the post");
+    }
+
+
+    return await prisma.post.delete(
+        {
+            where: {
+                id: postId
+            }
+        }
+    )
+}
+
+
+const getStats = async () => {
+    //STATISTIC: post count totoal publish post draftPost total comments total views
+
+    return await prisma.$transaction(async (tx) => {
+
+        const [totalPost, publishedPost, draftPost, archivedPost, totalCommnets, approveComment, totalUser, adminCount, userCount, totalViews] = await Promise.all([
+            await tx.post.count(),
+            await tx.post.count({ where: { status: postStatus.PUBLISHED } }),
+            await tx.post.count({ where: { status: postStatus.DRAFT } }),
+            await tx.post.count({ where: { status: postStatus.ARCHIVED } }),
+            await tx.comment.count(),
+            await tx.comment.count({ where: { status: commentStatus.APPROVED } }),
+            await tx.user.count(),
+            await tx.user.count({ where: { role: UserRole.ADMIN } }),
+            await tx.user.count({ where: { role: UserRole.USER } }),
+            await tx.post.aggregate(
+                {
+                    _sum:{views:true}
+                }
+            )
+        ])
+        return {
+            totalPost,
+            publishedPost,
+            draftPost,
+            archivedPost,
+            totalCommnets,
+            approveComment,
+            totalUser, 
+            adminCount, 
+            userCount,
+            totalViews:totalViews._sum.views
+        }
+    }
+    )
+}
+
 
 export const postService = {
     createPost,
     getAllPost,
-    getPostbyId
+    getPostbyId,
+    getMyPost,
+    updatePost,
+    deletePost,
+    getStats,
+
 }
