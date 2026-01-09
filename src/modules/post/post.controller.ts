@@ -1,10 +1,10 @@
-import { Request, RequestHandler, Response } from "express";
+import { NextFunction, Request, RequestHandler, Response } from "express";
 import { postService } from "./post.service";
 import { postStatus } from "../../../generated/prisma/enums";
 import paginationSortingHelper from "../../helpers/paginationSortingHelper";
 import { UserRole } from "../../middlewares/auth";
 
-const createPost = async (req: Request, res: Response) => {
+const createPost = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const user = req.user
         if (!user) {
@@ -20,10 +20,7 @@ const createPost = async (req: Request, res: Response) => {
         res.status(201).json(result)
     } catch (e) {
         res.status(400).json(
-            {
-                error: "Post creation failed",
-                details: e
-            }
+            next(e)
         )
     }
 }
@@ -133,9 +130,9 @@ const getMyPost = async (req: Request, res: Response) => {
         }
         const result = await postService.getMyPost(user.id)
         res.status(200).json(result)
-     
+
     } catch (e) {
-        
+
         res.status(400).json(
             {
                 error: "Post 111 featched failed",
@@ -146,14 +143,14 @@ const getMyPost = async (req: Request, res: Response) => {
 }
 
 
-const updatePost = async (req: Request, res: Response) => {
+const updatePost = async (req: Request, res: Response, next:NextFunction) => {
     try {
         const user = req.user;
         if (!user) {
             throw new Error("You are unauthorize please login");
 
         }
-        const {postId}= req.params;
+        const { postId } = req.params;
 
         // check user admin or not
 
@@ -162,18 +159,12 @@ const updatePost = async (req: Request, res: Response) => {
 
         const result = await postService.updatePost(postId as string, req.body, user.id, isAdmin)
         res.status(200).json(result)
-      
+
 
 
     } catch (e) {
-       const errorMessage= (e instanceof Error)? e.message:"Post update failed"
-        res.status(400).json(
-            
-            {
-                error:errorMessage,
-                details: e
-            }
-        )
+        const errorMessage = (e instanceof Error) ? e.message : "Post update failed"
+        next(e)
     }
 }
 const deletePost = async (req: Request, res: Response) => {
@@ -183,7 +174,7 @@ const deletePost = async (req: Request, res: Response) => {
             throw new Error("You are unauthorize please login");
 
         }
-        const {postId}= req.params;
+        const { postId } = req.params;
 
         // check user admin or not
 
@@ -192,15 +183,15 @@ const deletePost = async (req: Request, res: Response) => {
 
         const result = await postService.deletePost(postId as string, user.id, isAdmin)
         res.status(200).json(result)
-      
+
 
 
     } catch (e) {
-       const errorMessage= (e instanceof Error)? e.message:"Post update failed"
+        const errorMessage = (e instanceof Error) ? e.message : "Post update failed"
         res.status(400).json(
-            
+
             {
-                error:errorMessage,
+                error: errorMessage,
                 details: e
             }
         )
@@ -208,22 +199,22 @@ const deletePost = async (req: Request, res: Response) => {
 }
 
 
-const getStats=async (req: Request, res: Response) => {
-     try {
-       
+const getStats = async (req: Request, res: Response) => {
+    try {
+
 
 
         const result = await postService.getStats()
         res.status(200).json(result)
-      
+
 
 
     } catch (e) {
-       const errorMessage= (e instanceof Error)? e.message:"Post update failed"
+        const errorMessage = (e instanceof Error) ? e.message : "Post update failed"
         res.status(400).json(
-            
+
             {
-                error:errorMessage,
+                error: errorMessage,
                 details: e
             }
         )

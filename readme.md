@@ -6,7 +6,7 @@ Blog-app-project
 -- 
 
 
-Module - 27
+Module - 28
 1. update comments table status approved OR reject
 2. if the status already approved or reject throw a error
 3. post table get my post like facebook show in my profile my won post
@@ -21,3 +21,8 @@ Module - 27
 6. static API
 
 7.Multi-File Schema Architecture
+
+
+8.
+
+global error handler
